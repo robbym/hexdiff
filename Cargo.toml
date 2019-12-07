@@ -1,0 +1,13 @@
+[package]
+name = "hexdiff"
+version = "0.1.0"
+authors = ["Robby Madruga <robbymadruga@gmail.com>"]
+edition = "2018"
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[dependencies]
+ihex = "1.1.2"
+structopt = "0.3.5"
