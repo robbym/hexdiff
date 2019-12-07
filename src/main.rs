@@ -24,7 +24,11 @@ struct Opt {
 
     /// Print non-differences as well
     #[structopt(short, long)]
-    all: bool
+    all: bool,
+
+    /// Format output as JSON
+    #[structopt(short, long)]
+    json: bool,
 }
 
 fn main() {
@@ -36,6 +40,11 @@ fn main() {
     let diff_list = IHex16DiffEngine::diff(hex_1, hex_2);
 
     let mut output = Vec::new();
+    let mut first = false;
+
+    if opt.json {
+        writeln!(output, "[").unwrap();
+    };
 
     for diff in diff_list {
         match diff {
@@ -44,14 +53,30 @@ fn main() {
                 value_1,
                 value_2,
             } if opt.all || value_1 != value_2 => {
-                writeln!(
-                    output,
-                    "{:06X} {:06X} {:06X}",
-                    address / 2,
-                    value_1,
-                    value_2
-                )
-                .unwrap();
+                if opt.json {
+                    if !first {
+                        first = true;
+                    } else {
+                        if opt.json {
+                            writeln!(output, ",").unwrap();
+                        }
+                    }
+                    write!(output, "{{").unwrap();
+                    write!(output, "\"type\": \"single\",").unwrap();
+                    write!(output, "\"address\": {},", address / 2).unwrap();
+                    write!(output, "\"left\": {},", value_1).unwrap();
+                    write!(output, "\"right\": {}", value_2).unwrap();
+                    write!(output, "}}").unwrap();
+                } else {
+                    writeln!(
+                        output,
+                        "{:06X} {:06X} {:06X}",
+                        address / 2,
+                        value_1,
+                        value_2
+                    )
+                    .unwrap();
+                }
             }
 
             IHex16Diff::Range {
@@ -60,20 +85,41 @@ fn main() {
                 value_1,
                 value_2,
             } if opt.all || value_1 != value_2 => {
-                writeln!(
-                    output,
-                    "{:06X} {:06X} {:06X} {:06X}",
-                    start / 2,
-                    end / 2,
-                    value_1,
-                    value_2
-                )
-                .unwrap();
+                if opt.json {
+                    if !first {
+                        first = true;
+                    } else {
+                        if opt.json {
+                            writeln!(output, ",").unwrap();
+                        }
+                    }
+                    write!(output, "{{").unwrap();
+                    write!(output, "\"type\": \"range\",").unwrap();
+                    write!(output, "\"start\": {},", start / 2).unwrap();
+                    write!(output, "\"end\": {},", end / 2).unwrap();
+                    write!(output, "\"left\": {},", value_1).unwrap();
+                    write!(output, "\"right\": {}", value_2).unwrap();
+                    write!(output, "}}").unwrap();
+                } else {
+                    writeln!(
+                        output,
+                        "{:06X} {:06X} {:06X} {:06X}",
+                        start / 2,
+                        end / 2,
+                        value_1,
+                        value_2
+                    )
+                    .unwrap();
+                }
             }
 
             _ => {}
         }
     }
+
+    if opt.json {
+        write!(output, "]").unwrap();
+    };
 
     if let Some(output_file) = opt.output {
         let mut diff_file = File::create(output_file).unwrap();
