@@ -20,7 +20,7 @@ struct Opt {
     file_2: PathBuf,
 
     #[structopt(short, long, parse(from_os_str))]
-    output: Option<PathBuf>
+    output: Option<PathBuf>,
 }
 
 fn main() {

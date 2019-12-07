@@ -61,14 +61,20 @@ impl IHex16DiffEngine {
 
     fn advance(&mut self) {
         match (self.curr_1, self.curr_2) {
-            (None, None) => { return; }
-            (Some(_), None) => { self.curr_1 = self.hex_1.next(); }
-            (None, Some(_)) => { self.curr_2 = self.hex_2.next(); }
+            (None, None) => {
+                return;
+            }
+            (Some(_), None) => {
+                self.curr_1 = self.hex_1.next();
+            }
+            (None, Some(_)) => {
+                self.curr_2 = self.hex_2.next();
+            }
             (Some(l), Some(r)) => {
                 if l.address <= r.address {
                     self.curr_1 = self.hex_1.next();
                 }
-    
+
                 if r.address <= l.address {
                     self.curr_2 = self.hex_2.next();
                 }
@@ -88,7 +94,7 @@ impl Iterator for IHex16DiffEngine {
                         start: self.address,
                         end: address - 4,
                         value_1: 0xFFFFFF,
-                        value_2: 0xFFFFFF
+                        value_2: 0xFFFFFF,
                     };
                     self.address = address;
                     return Some(output);
@@ -109,7 +115,9 @@ impl Iterator for IHex16DiffEngine {
                                 next_value_1 = nv1;
                                 next_value_2 = nv2;
                             }
-                            None => { break; }
+                            None => {
+                                break;
+                            }
                         }
                     }
 
@@ -117,7 +125,7 @@ impl Iterator for IHex16DiffEngine {
                         let output = IHex16Diff::Single {
                             address,
                             value_1,
-                            value_2
+                            value_2,
                         };
                         self.address += 4;
                         Some(output)
@@ -126,7 +134,7 @@ impl Iterator for IHex16DiffEngine {
                             start: address,
                             end: next_address - 4,
                             value_1,
-                            value_2
+                            value_2,
                         };
                         self.address = next_address;
                         Some(output)
