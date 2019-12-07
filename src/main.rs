@@ -21,6 +21,10 @@ struct Opt {
 
     #[structopt(short, long, parse(from_os_str))]
     output: Option<PathBuf>,
+
+    /// Print non-differences as well
+    #[structopt(short, long)]
+    all: bool
 }
 
 fn main() {
@@ -39,7 +43,7 @@ fn main() {
                 address,
                 value_1,
                 value_2,
-            } => {
+            } if opt.all || value_1 != value_2 => {
                 writeln!(
                     output,
                     "{:06X} {:06X} {:06X}",
@@ -55,7 +59,7 @@ fn main() {
                 end,
                 value_1,
                 value_2,
-            } => {
+            } if opt.all || value_1 != value_2 => {
                 writeln!(
                     output,
                     "{:06X} {:06X} {:06X} {:06X}",
@@ -66,6 +70,8 @@ fn main() {
                 )
                 .unwrap();
             }
+
+            _ => {}
         }
     }
 
