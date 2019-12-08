@@ -18,6 +18,16 @@ pub enum IHex16Diff {
     },
 }
 
+impl IHex16Diff {
+    fn range(start: u32, end: u32, value_1: u32, value_2: u32) -> IHex16Diff {
+        IHex16Diff::Range { start, end, value_1, value_2 }
+    }
+
+    fn single(address: u32, value_1: u32, value_2: u32) -> IHex16Diff {
+        IHex16Diff::Single{ address, value_1, value_2 }
+    }
+}
+
 pub struct IHex16DiffEngine {
     hex_1: Fuse<vec::IntoIter<IHex16Word>>,
     hex_2: Fuse<vec::IntoIter<IHex16Word>>,
@@ -87,62 +97,41 @@ impl Iterator for IHex16DiffEngine {
     type Item = IHex16Diff;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.compare() {
-            Some((address, value_1, value_2)) => {
-                if address > self.address {
-                    let output = IHex16Diff::Range {
-                        start: self.address,
-                        end: address - 4,
-                        value_1: 0xFFFFFF,
-                        value_2: 0xFFFFFF,
-                    };
-                    self.address = address;
-                    return Some(output);
+        let (address, value_1, value_2) = self.compare()?;
+
+        if address > self.address {
+            let output = IHex16Diff::range(self.address, address - 4, 0xFFFFFF, 0xFFFFFF);
+            self.address = address;
+            return Some(output);
+        } else {
+            let mut next_address = address;
+            let mut next_value_1 = value_1;
+            let mut next_value_2 = value_2;
+
+            while next_value_1 == value_1 && next_value_2 == value_2 {
+                self.advance();
+
+                if let Some((na, nv1, nv2)) = self.compare() {
+                    if (na - 4) != next_address {
+                        break;
+                    }
+
+                    next_address += 4;
+                    next_value_1 = nv1;
+                    next_value_2 = nv2;
                 } else {
-                    let mut next_address = address;
-                    let mut next_value_1 = value_1;
-                    let mut next_value_2 = value_2;
-
-                    while next_value_1 == value_1 && next_value_2 == value_2 {
-                        self.advance();
-                        match self.compare() {
-                            Some((na, nv1, nv2)) => {
-                                if (na - 4) != next_address {
-                                    break;
-                                }
-
-                                next_address += 4;
-                                next_value_1 = nv1;
-                                next_value_2 = nv2;
-                            }
-                            None => {
-                                break;
-                            }
-                        }
-                    }
-
-                    if address == next_address - 4 {
-                        let output = IHex16Diff::Single {
-                            address,
-                            value_1,
-                            value_2,
-                        };
-                        self.address += 4;
-                        Some(output)
-                    } else {
-                        let output = IHex16Diff::Range {
-                            start: address,
-                            end: next_address - 4,
-                            value_1,
-                            value_2,
-                        };
-                        self.address = next_address;
-                        Some(output)
-                    }
+                    break;
                 }
             }
-            None => {
-                return None;
+
+            if address == next_address - 4 {
+                let output = IHex16Diff::single(address, value_1, value_2);
+                self.address += 4;
+                Some(output)
+            } else {
+                let output = IHex16Diff::range(address, next_address - 4, value_1, value_2);
+                self.address = next_address;
+                Some(output)
             }
         }
     }
