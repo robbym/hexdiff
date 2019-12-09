@@ -1,3 +1,4 @@
+use std::fmt;
 use std::iter::Fuse;
 use std::vec;
 
@@ -44,15 +45,55 @@ impl IHex16Diff {
 
     pub fn is_same(&self) -> bool {
         match self {
-            IHex16Diff::Single { address: _, value_1, value_2 } => value_1 == value_2,
-            IHex16Diff::Range { start: _, end: _, value_1, value_2 } => value_1 == value_2
+            IHex16Diff::Single {
+                address: _,
+                value_1,
+                value_2,
+            } => value_1 == value_2,
+            IHex16Diff::Range {
+                start: _,
+                end: _,
+                value_1,
+                value_2,
+            } => value_1 == value_2,
         }
     }
 
     pub fn is_diff(&self) -> bool {
         match self {
-            IHex16Diff::Single { address: _, value_1, value_2 } => value_1 != value_2,
-            IHex16Diff::Range { start: _, end: _, value_1, value_2 } => value_1 != value_2
+            IHex16Diff::Single {
+                address: _,
+                value_1,
+                value_2,
+            } => value_1 != value_2,
+            IHex16Diff::Range {
+                start: _,
+                end: _,
+                value_1,
+                value_2,
+            } => value_1 != value_2,
+        }
+    }
+}
+
+impl fmt::Display for IHex16Diff {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            IHex16Diff::Single {
+                address,
+                value_1,
+                value_2,
+            } => write!(f, "{:06X} {:06X} {:06X}", address, value_1, value_2),
+            IHex16Diff::Range {
+                start,
+                end,
+                value_1,
+                value_2,
+            } => write!(
+                f,
+                "{:06X} {:06X} {:06X} {:06X}",
+                start, end, value_1, value_2
+            ),
         }
     }
 }
@@ -162,12 +203,7 @@ impl Iterator for IHex16DiffEngine {
             self.address += 4;
             Some(output)
         } else {
-            let output = IHex16Diff::range(
-                address / 2,
-                (next_address - 4) / 2,
-                value_1,
-                value_2,
-            );
+            let output = IHex16Diff::range(address / 2, (next_address - 4) / 2, value_1, value_2);
             self.address = next_address;
             Some(output)
         }
