@@ -4,6 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
+use itertools::Itertools;
 use serde_json;
 use structopt::StructOpt;
 
@@ -54,25 +55,7 @@ fn main() {
     if opt.json {
         output = serde_json::to_string_pretty(&diff_list).unwrap();
     } else {
-        output = diff_list
-            .iter()
-            .map(|x| match x {
-                IHex16Diff::Single {
-                    address,
-                    value_1,
-                    value_2,
-                } => format!("{:06X} {:06X} {:06X}\n", address, value_1, value_2),
-                IHex16Diff::Range {
-                    start,
-                    end,
-                    value_1,
-                    value_2,
-                } => format!(
-                    "{:06X} {:06X} {:06X} {:06X}\n",
-                    start, end, value_1, value_2
-                ),
-            })
-            .collect();
+        output = diff_list.iter().join("\n");
     }
 
     if let Some(output_file_path) = opt.output {
