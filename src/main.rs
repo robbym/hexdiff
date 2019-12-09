@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -38,7 +40,14 @@ fn main() {
     let hex_1 = IHex16File::from_reader(&mut File::open(opt.file_1).unwrap());
     let hex_2 = IHex16File::from_reader(&mut File::open(opt.file_2).unwrap());
 
-    let diff_list = IHex16DiffEngine::diff(hex_1, hex_2).collect::<Vec<_>>();
+    let diff_iter = IHex16DiffEngine::diff(hex_1, hex_2);
+    let diff_list;
+
+    if !opt.all {
+        diff_list = diff_iter.filter(IHex16Diff::is_diff).collect::<Vec<_>>();
+    } else {
+        diff_list = diff_iter.collect::<Vec<_>>();
+    }
 
     let output: String;
 

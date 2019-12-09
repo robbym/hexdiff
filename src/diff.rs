@@ -41,6 +41,20 @@ impl IHex16Diff {
             value_2,
         }
     }
+
+    pub fn is_same(&self) -> bool {
+        match self {
+            IHex16Diff::Single { address: _, value_1, value_2 } => value_1 == value_2,
+            IHex16Diff::Range { start: _, end: _, value_1, value_2 } => value_1 == value_2
+        }
+    }
+
+    pub fn is_diff(&self) -> bool {
+        match self {
+            IHex16Diff::Single { address: _, value_1, value_2 } => value_1 != value_2,
+            IHex16Diff::Range { start: _, end: _, value_1, value_2 } => value_1 != value_2
+        }
+    }
 }
 
 pub struct IHex16DiffEngine {
@@ -144,15 +158,15 @@ impl Iterator for IHex16DiffEngine {
         }
 
         if address == next_address - 4 {
-            let output = IHex16Diff::single(address / 2, value_1 / 2, value_2 / 2);
+            let output = IHex16Diff::single(address / 2, value_1, value_2);
             self.address += 4;
             Some(output)
         } else {
             let output = IHex16Diff::range(
                 address / 2,
                 (next_address - 4) / 2,
-                value_1 / 2,
-                value_2 / 2,
+                value_1,
+                value_2,
             );
             self.address = next_address;
             Some(output)
