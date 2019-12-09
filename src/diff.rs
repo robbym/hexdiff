@@ -1,15 +1,21 @@
 use std::iter::Fuse;
 use std::vec;
 
+use serde_derive::Serialize;
+
 use super::ihex16::{IHex16File, IHex16Word};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone, Serialize)]
+#[serde(tag = "type")]
 pub enum IHex16Diff {
+    #[serde(rename(serialize = "single"))]
     Single {
         address: u32,
         value_1: u32,
         value_2: u32,
     },
+
+    #[serde(rename(serialize = "range"))]
     Range {
         start: u32,
         end: u32,
@@ -20,11 +26,20 @@ pub enum IHex16Diff {
 
 impl IHex16Diff {
     fn range(start: u32, end: u32, value_1: u32, value_2: u32) -> IHex16Diff {
-        IHex16Diff::Range { start, end, value_1, value_2 }
+        IHex16Diff::Range {
+            start,
+            end,
+            value_1,
+            value_2,
+        }
     }
 
     fn single(address: u32, value_1: u32, value_2: u32) -> IHex16Diff {
-        IHex16Diff::Single{ address, value_1, value_2 }
+        IHex16Diff::Single {
+            address,
+            value_1,
+            value_2,
+        }
     }
 }
 
@@ -113,7 +128,7 @@ impl Iterator for IHex16DiffEngine {
 
             if let Some((na, nv1, nv2)) = self.compare() {
                 if (na - 4) != next_address {
-                    if next_value_1 == 0xFFFFFF &&  next_value_2 == 0xFFFFFF {
+                    if next_value_1 == 0xFFFFFF && next_value_2 == 0xFFFFFF {
                         next_address = na - 4;
                     } else {
                         break;
@@ -129,11 +144,16 @@ impl Iterator for IHex16DiffEngine {
         }
 
         if address == next_address - 4 {
-            let output = IHex16Diff::single(address, value_1, value_2);
+            let output = IHex16Diff::single(address / 2, value_1 / 2, value_2 / 2);
             self.address += 4;
             Some(output)
         } else {
-            let output = IHex16Diff::range(address, next_address - 4, value_1, value_2);
+            let output = IHex16Diff::range(
+                address / 2,
+                (next_address - 4) / 2,
+                value_1 / 2,
+                value_2 / 2,
+            );
             self.address = next_address;
             Some(output)
         }

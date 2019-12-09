@@ -1,7 +1,7 @@
 [package]
 name = "hexdiff"
 version = "0.1.0"
-authors = ["Robby Madruga <robbymadruga@gmail.com>"]
+author = ["Robby Madruga <robbymadruga@gmail.com>"]
 edition = "2018"
 
 [profile.release]
@@ -11,3 +11,6 @@ lto = true
 [dependencies]
 ihex = "1.1.2"
 structopt = "0.3.5"
+serde = "1.0.103"
+serde_derive = "1.0.103"
+serde_json = "1.0.44"

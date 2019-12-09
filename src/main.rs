@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
+use serde_json;
 use structopt::StructOpt;
 
 mod ihex16;
@@ -11,7 +12,7 @@ mod diff;
 use diff::{IHex16Diff, IHex16DiffEngine};
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "hexdiff")]
+#[structopt(name = "hexdiff", author = "Robby Madruga <robbymadruga@gmail.com>")]
 struct Opt {
     #[structopt(name = "FILE_1", parse(from_os_str))]
     file_1: PathBuf,
@@ -37,96 +38,38 @@ fn main() {
     let hex_1 = IHex16File::from_reader(&mut File::open(opt.file_1).unwrap());
     let hex_2 = IHex16File::from_reader(&mut File::open(opt.file_2).unwrap());
 
-    let diff_list = IHex16DiffEngine::diff(hex_1, hex_2);
+    let diff_list = IHex16DiffEngine::diff(hex_1, hex_2).collect::<Vec<_>>();
 
-    let mut output = Vec::new();
-    let mut first = false;
+    let output: String;
 
     if opt.json {
-        writeln!(output, "[").unwrap();
-    };
-
-    for diff in diff_list {
-        match diff {
-            IHex16Diff::Single {
-                address,
-                value_1,
-                value_2,
-            } if opt.all || value_1 != value_2 => {
-                if opt.json {
-                    if !first {
-                        first = true;
-                    } else {
-                        if opt.json {
-                            writeln!(output, ",").unwrap();
-                        }
-                    }
-                    write!(output, "{{").unwrap();
-                    write!(output, "\"type\": \"single\",").unwrap();
-                    write!(output, "\"address\": {},", address / 2).unwrap();
-                    write!(output, "\"left\": {},", value_1).unwrap();
-                    write!(output, "\"right\": {}", value_2).unwrap();
-                    write!(output, "}}").unwrap();
-                } else {
-                    writeln!(
-                        output,
-                        "{:06X} {:06X} {:06X}",
-                        address / 2,
-                        value_1,
-                        value_2
-                    )
-                    .unwrap();
-                }
-            }
-
-            IHex16Diff::Range {
-                start,
-                end,
-                value_1,
-                value_2,
-            } if opt.all || value_1 != value_2 => {
-                if opt.json {
-                    if !first {
-                        first = true;
-                    } else {
-                        if opt.json {
-                            writeln!(output, ",").unwrap();
-                        }
-                    }
-                    write!(output, "{{").unwrap();
-                    write!(output, "\"type\": \"range\",").unwrap();
-                    write!(output, "\"start\": {},", start / 2).unwrap();
-                    write!(output, "\"end\": {},", end / 2).unwrap();
-                    write!(output, "\"left\": {},", value_1).unwrap();
-                    write!(output, "\"right\": {}", value_2).unwrap();
-                    write!(output, "}}").unwrap();
-                } else {
-                    writeln!(
-                        output,
-                        "{:06X} {:06X} {:06X} {:06X}",
-                        start / 2,
-                        end / 2,
-                        value_1,
-                        value_2
-                    )
-                    .unwrap();
-                }
-            }
-
-            _ => {}
-        }
+        output = serde_json::to_string_pretty(&diff_list).unwrap();
+    } else {
+        output = diff_list
+            .iter()
+            .map(|x| match x {
+                IHex16Diff::Single {
+                    address,
+                    value_1,
+                    value_2,
+                } => format!("{:06X} {:06X} {:06X}\n", address, value_1, value_2),
+                IHex16Diff::Range {
+                    start,
+                    end,
+                    value_1,
+                    value_2,
+                } => format!(
+                    "{:06X} {:06X} {:06X} {:06X}\n",
+                    start, end, value_1, value_2
+                ),
+            })
+            .collect();
     }
 
-    if opt.json {
-        write!(output, "]").unwrap();
-    };
-
-    if let Some(output_file) = opt.output {
-        let mut diff_file = File::create(output_file).unwrap();
-        diff_file.write_all(&mut output).unwrap();
+    if let Some(output_file_path) = opt.output {
+        let mut output_file = File::create(output_file_path).unwrap();
+        output_file.write(output.as_bytes()).unwrap();
     } else {
-        unsafe {
-            print!("{}", String::from_utf8_unchecked(output));
-        }
+        println!("{}", output);
     }
 }
