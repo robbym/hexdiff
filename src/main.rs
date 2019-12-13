@@ -23,7 +23,8 @@ struct Opt {
     #[structopt(name = "FILE_2", parse(from_os_str))]
     file_2: PathBuf,
 
-    #[structopt(short, long, parse(from_os_str))]
+    /// Optionally output diff to a file instead of stdout
+    #[structopt(short, long, parse(from_os_str), value_names = &["file"])]
     output: Option<PathBuf>,
 
     /// Print non-differences as well
@@ -33,6 +34,16 @@ struct Opt {
     /// Format output as JSON
     #[structopt(short, long)]
     json: bool,
+
+    /// Specify an address or address range to ignore{n}
+    /// Omitting a bound on a range defaults it to the min or max respectfully{n}
+    /// Examples:{n}
+    /// -i 4000{n}
+    /// -i 4000:6000{n}
+    /// -i 4000:{n}
+    /// -i :6000
+    #[structopt(short, long, value_names = &["address | range"])]
+    ignore: Vec<String>,
 }
 
 fn main() {
@@ -44,8 +55,30 @@ fn main() {
     let diff_iter = IHex16DiffEngine::diff(hex_1, hex_2);
     let diff_list;
 
+    let ignore_list = opt
+        .ignore
+        .iter()
+        .map(|range| {
+            match range
+                .split(":")
+                .map(|x| u32::from_str_radix(x, 16).ok())
+                .collect::<Vec<Option<u32>>>()
+                .as_slice()
+            {
+                [Some(a), Some(b)] => *a..=*b,
+                [None, Some(b)] => 0..=*b,
+                [Some(a), None] => *a..=core::u32::MAX,
+                [Some(a)] => *a..=*a,
+                _ => panic!("INVALID IGNORE RANGE"),
+            }
+        })
+        .collect::<Vec<_>>();
+
     if !opt.all {
-        diff_list = diff_iter.filter(IHex16Diff::is_diff).collect::<Vec<_>>();
+        diff_list = diff_iter
+            .filter(|x| !ignore_list.iter().any(|y| IHex16Diff::in_range(x, y)))
+            .filter(IHex16Diff::is_diff)
+            .collect::<Vec<_>>();
     } else {
         diff_list = diff_iter.collect::<Vec<_>>();
     }

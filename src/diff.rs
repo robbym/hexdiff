@@ -1,5 +1,6 @@
 use std::fmt;
 use std::iter::Fuse;
+use std::ops::RangeInclusive;
 use std::vec;
 
 use serde_derive::Serialize;
@@ -72,6 +73,22 @@ impl IHex16Diff {
                 value_1,
                 value_2,
             } => value_1 != value_2,
+        }
+    }
+
+    pub fn in_range(&self, range: &RangeInclusive<u32>) -> bool {
+        match self {
+            IHex16Diff::Single {
+                address,
+                value_1: _,
+                value_2: _,
+            } => range.contains(address),
+            IHex16Diff::Range {
+                start,
+                end,
+                value_1: _,
+                value_2: _,
+            } => range.contains(start) && range.contains(end),
         }
     }
 }
