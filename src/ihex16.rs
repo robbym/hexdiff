@@ -1,7 +1,6 @@
 use std::io::Read;
 
-use ihex::reader::Reader;
-use ihex::record::Record;
+use ihex::{Reader, Record};
 
 #[derive(Debug, Copy, Clone)]
 pub struct IHex16Word {
